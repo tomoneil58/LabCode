@@ -1,6 +1,34 @@
 library(Seurat)
 library(ggplot2)
 library(dplyr)
+library(tidyr)
+library(tidyverse)
 
-x=2
-y <- c("T")
+# load in data
+githubURL <- ("https://github.com/tomoneil58/LabCode/raw/main/LOADINAS_means_bulkmeans.rds")
+download.file(githubURL,"bulk2.rds")
+bulk1 <- readRDS("bulk1.rds")
+
+githubURL <- ("https://github.com/tomoneil58/LabCode/raw/main/LOADINAS_extras_bulk_CD33_EpiMNP.rds")
+download.file(githubURL,"bulk2.rds")
+bulk2 <- readRDS("bulk2.rds")
+
+rm(githubURL)
+
+# Bulk function
+bulk <- function(gene=c()) {
+  x <- as.data.frame(t(bulk1[gene[1],]))
+  y <- as.data.frame(t(bulk2[gene[1],]))
+  if (length(gene)>1) {
+    for(i in 2:length(gene)) {  
+      x[[gene[i]]] <- t(bulk1[gene[i],])
+      y[[gene[i]]] <- t(bulk2[gene[i],])
+    }
+  }
+  xy <- rbind(x,y)
+  colnames(xy) <- gene
+  xy$cell <- rownames(xy)
+  
+  pivot_longer(xy, cols = gene, names_to="summary", values_to="sugars") %>%
+    ggplot(aes(x=cell, y=sugars, group=summary, colour=summary)) + geom_point()+labs(title=gene) +ylab("Expression")+ xlab("") +theme_classic()
+}
