@@ -6,7 +6,7 @@ library(tidyverse)
 
 # load in data
 githubURL <- ("https://github.com/tomoneil58/LabCode/raw/main/LOADINAS_means_bulkmeans.rds")
-download.file(githubURL,"bulk2.rds")
+download.file(githubURL,"bulk1.rds")
 bulk1 <- readRDS("bulk1.rds")
 
 githubURL <- ("https://github.com/tomoneil58/LabCode/raw/main/LOADINAS_extras_bulk_CD33_EpiMNP.rds")
