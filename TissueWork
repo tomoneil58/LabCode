@@ -4,6 +4,8 @@ library(dplyr)
 library(tidyr)
 library(tidyverse)
 
+set.seed(31456)
+
 # load in data
 githubURL <- ("https://github.com/tomoneil58/LabCode/raw/main/LOADINAS_means_bulkmeans.rds")
 download.file(githubURL,"bulk1.rds")
