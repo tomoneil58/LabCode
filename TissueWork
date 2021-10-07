@@ -7,15 +7,9 @@ library(tidyverse)
 set.seed(31456)
 
 # load in data
-githubURL <- ("https://github.com/tomoneil58/LabCode/raw/main/LOADINAS_means_bulkmeans.rds")
-download.file(githubURL,"bulk1.rds")
-bulk1 <- readRDS("bulk1.rds")
-
-githubURL <- ("https://github.com/tomoneil58/LabCode/raw/main/LOADINAS_extras_bulk_CD33_EpiMNP.rds")
-download.file(githubURL,"bulk2.rds")
-bulk2 <- readRDS("bulk2.rds")
-
-rm(githubURL)
+bulk1 <- read.csv("https://github.com/tomoneil58/LabCode/blob/main/means_bulk.csv?raw=true", header=T)
+rownames(bulk1) <- bulk1$X
+bulk1 <- bulk1[,-1] 
 
 # Bulk function
 bulk <- function(gene=c(), split=F) {
