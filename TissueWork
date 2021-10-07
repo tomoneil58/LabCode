@@ -18,19 +18,27 @@ bulk2 <- readRDS("bulk2.rds")
 rm(githubURL)
 
 # Bulk function
-bulk <- function(gene=c()) {
+bulk <- function(gene=c(), split=F) {
   x <- as.data.frame(t(bulk1[gene[1],]))
-  y <- as.data.frame(t(bulk2[gene[1],]))
   if (length(gene)>1) {
     for(i in 2:length(gene)) {  
       x[[gene[i]]] <- t(bulk1[gene[i],])
-      y[[gene[i]]] <- t(bulk2[gene[i],])
     }
   }
-  xy <- rbind(x,y)
-  colnames(xy) <- gene
-  xy$cell <- rownames(xy)
+  colnames(x) <- gene
+  x$cell <- rownames(x)
   
-  pivot_longer(xy, cols = gene, names_to="summary", values_to="sugars") %>%
-    ggplot(aes(x=cell, y=sugars, group=summary, colour=summary)) + geom_point()+labs(title=gene) +ylab("Expression")+ xlab("") +theme_classic()
+  if (split==T) {
+    e <- x[1:3,]
+    d <- x[4:9,]
+    p1 <- pivot_longer(e, cols = gene, names_to="summary", values_to="sugars") %>%
+      ggplot(aes(x=cell, y=sugars, group=summary, colour=summary)) + geom_point()+labs(title=gene) +ylab("Expression: Epi")+ xlab("") +theme_classic()
+    p2 <- pivot_longer(d, cols = gene, names_to="summary", values_to="sugars") %>%
+      ggplot(aes(x=cell, y=sugars, group=summary, colour=summary)) + geom_point()+labs(title=gene) +ylab("Expression: Derm")+ xlab("") +theme_classic()
+    p1+p2
+  } else {
+     pivot_longer(x, cols = gene, names_to="summary", values_to="sugars") %>%
+       ggplot(aes(x=cell, y=sugars, group=summary, colour=summary)) + geom_point()+labs(title=gene) +ylab("Expression")+ xlab("") +theme_classic()
+
+    }
 }
