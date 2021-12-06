@@ -91,7 +91,7 @@ ref <- grep("Spleen", meta$tissue)
 ref <- grep("Blood", meta$tissue)
 
 #temp 
-temp <- data[,ref]
+temp <- cpm[,ref]
 tempmeta <- meta[ref,]
 
 #resident
@@ -145,7 +145,7 @@ ref <- grep("Spleen", meta$tissue)
 ref <- grep("Blood", meta$tissue)
 
 #temp 
-temp <- data[,ref]
+temp <- cpm[,ref]
 tempmeta <- meta[ref,]
 
 #resident
@@ -181,7 +181,7 @@ group2 <- temp
 group2m <- tempmeta
 
 #means
-means <- data.frame(Genes = rownames(data), ident.1 = rowMeans(group1), ident.2 = rowMeans(group2))
+means <- data.frame(Genes = rownames(cpm), ident.1 = rowMeans(group1), ident.2 = rowMeans(group2))
 for (i in 1:nrow(means)) {
   
   a <- log2(means[i,"ident.1"])
