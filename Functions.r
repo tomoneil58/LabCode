@@ -44,3 +44,37 @@ getCSV <- function(data, geneList = c(), name="") {
   }
   dev.off()
 }
+
+
+
+proportions <- function(data, ident.1, ident.2, position) {
+  x<- FetchData(data,c(ident.1,ident.2))
+  colnames(x) <- c('ident.2', 'ident.1')
+  x%>% group_by(ident.1) %>%
+    mutate(prop=1/length(ident.2)) %>%
+    ungroup() %>%
+    group_by(ident.2,ident.1) %>%
+    summarise(totprop=sum(prop)) %>%
+    ggplot(aes(x=ident.2,fill=ident.1,y=totprop)) +  
+    geom_bar(position=position, stat='identity') + theme(axis.text.x = 
+                                                           element_text(angle = 45,hjust=1))+scale_y_continuous(name="Cluster
+    Proportion")+ theme_classic()
+}
+
+DiffGenes <- function(data, subset=c(), split.by=c(), n.genes=10) {
+  temp <- subset(data#
+                 , idents=c(subset))#
+  Idents(temp) <- split.by
+  
+  avg.cells <- as.data.frame(log1p(AverageExpression(temp, verbose = FALSE)$RNA))
+  avg.cells$gene <- rownames(avg.cells)
+  
+  marks <- FindAllMarkers(temp, assay = 'RNA', only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.4)
+  topm <- marks %>% group_by(cluster) %>% top_n(n = n.genes, wt = avg_log2FC)
+  
+  nam <- colnames(avg.cells)
+  colnames(avg.cells) <- c("ident.1", "ident.2")
+  
+  p1 <- ggplot(avg.cells, aes(ident.1, ident.2)) + geom_point() + ggtitle(paste("Differential expressions of", subset))+xlab(nam[1])+ylab(nam[2])
+  LabelPoints(plot = p1, points = topm$gene, repel = TRUE)
+}
