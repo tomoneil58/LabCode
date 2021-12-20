@@ -61,11 +61,12 @@ proportions <- function(data, ident.1, ident.2, position) {
     Proportion")+ theme_classic()
 }
 
-DiffGenes <- function(data, subset=c(), split.by=c(), n.genes=10) {
+
+DiffGenes <- function(data, subset=c(), split.by=c(), n.genes=10, print=F) {
   temp <- subset(data#
                  , idents=c(subset))#
   Idents(temp) <- split.by
-  
+  temp <- NormalizeData(temp, normalization.method = 'LogNormalize')
   avg.cells <- as.data.frame(log1p(AverageExpression(temp, verbose = FALSE)$RNA))
   avg.cells$gene <- rownames(avg.cells)
   
@@ -74,7 +75,20 @@ DiffGenes <- function(data, subset=c(), split.by=c(), n.genes=10) {
   
   nam <- colnames(avg.cells)
   colnames(avg.cells) <- c("ident.1", "ident.2")
-  
-  p1 <- ggplot(avg.cells, aes(ident.1, ident.2)) + geom_point() + ggtitle(paste("Differential expressions of", subset))+xlab(nam[1])+ylab(nam[2])
-  LabelPoints(plot = p1, points = topm$gene, repel = TRUE)
+
+  if (print==T) { #not currently working?
+    date <- date()
+    mon <- substr(date, 5,7)
+    day <- substr(date, 9,10)
+    year <- substr(date, 21,24)
+    write.csv(marks, paste0("topGenes","_", year,mon,day, ".csv"))
+    pdf(paste0("plot_",n.genes,"genes", year,mon,day, ".pdf"), height=5, width=5)
+    p1 <- ggplot(avg.cells, aes(ident.1, ident.2)) + geom_point() + ggtitle(paste("Differential expressions of", subset))+xlab(nam[1])+ylab(nam[2])+theme_classic()+geom_abline(slope=1)
+    LabelPoints(plot = p1, points = topm$gene, repel = TRUE)
+    dev.off()
+  } else {
+    p1 <- ggplot(avg.cells, aes(ident.1, ident.2)) + geom_point() + ggtitle(paste("Differential expressions of", subset))+xlab(nam[1])+ylab(nam[2])+theme_classic()+geom_abline(slope=1)
+    LabelPoints(plot = p1, points = topm$gene, repel = TRUE)
+    
+  }
 }
