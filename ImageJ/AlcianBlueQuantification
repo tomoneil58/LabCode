@@ -1,0 +1,175 @@
+// This is possibly an unfinished version of the code, but the majority of it is functional 
+
+// choose project folder
+
+Dir = getDirectory("Choose analysis folder:");
+
+//Image Directory
+Dir_im = ""+Dir+"/Images/";
+
+
+//Create folder for 'Completed Images'
+	// Dir_good
+	// dump roi and images here
+Dir_good = ""+Dir+"/CompletedImages/";
+File.makeDirectory(Dir_good);
+
+//Create folder for 'NeedToLookAt'
+	//Dir_nogood
+Dir_nogood = ""+Dir+"/NeedToLookAt/";
+File.makeDirectory(Dir_nogood);
+
+//Create folder for .csv
+	//Dir_csv
+Dir_csv = ""+Dir+"/CSV/";
+File.makeDirectory(Dir_csv);
+
+//-----------------------------------------------
+run("Set Measurements...", "area mean min display redirect=None decimal=3")
+
+//------------------------------------------------
+//Function
+	//---------------------------
+	//----SelectCheck------------
+	//---------------------------
+	// Can save the program from crashing if you're supposed
+	//   to have an area selected. If there is no area selected, 
+	//   the program may exit. This runs a check to make sure 
+	//	 SOMETHING is selected before moving forward and potentially
+	//	 crashing the program. 
+	
+	function selectCheck() {
+		checkVal = getValue("selection.size");
+		if (checkVal == 0){
+			waitForUser("You forgot to check select!");
+		}
+	}
+
+	//---------------------------
+	//----SelectAllSelectNone----
+	//---------------------------
+	// Quick way to remove the roi selections, which can
+	//  stuff up masking and relevant.
+	
+	function noSelect() {
+	 	roiManager("Show All");
+		roiManager("Show None");
+	}
+	
+	//---------------------------
+
+//------------------------------------------------
+//
+// Roi manager
+// Outline == [0]
+
+
+//------------------------------------------------
+//
+nextImage = "Yes";
+while(nextImage =="Yes"){
+
+	//open image
+		//get file name
+		images = getFileList(Dir_im);
+		workingImage = images[0];
+		open(Dir_im+workingImage);
+		
+		//Outline tissue
+		selectWindow(workingImage);
+		setTool("polygon");	
+		waitForUser("Outline the Tissue Area\n \nDo not click until outlined!");
+		selectCheck();
+		selectCheck();
+			// saveROI
+			// RenameROI "Outline"
+			// noSelect()
+		roiManager("Add");
+		roiManager("Select", 0);
+		roiManager("Rename", "Outline");
+		noSelect();
+
+		//ColorDecon - A
+		selectWindow(workingImage);
+		run("Colour Deconvolution", "vectors=[Alcian blue & H] hide");
+		colour1 = ""+workingImage+"-(Colour_1)";
+		colour2 = ""+workingImage+"-(Colour_2)";
+		colour3 = ""+workingImage+"-(Colour_3)";
+		close(colour3);
+		selectWindow(colour1);
+		run("Invert");
+		
+		run("Threshold...");
+		waitForUser("Threshold.\n \nDo not click OK until you have selected!");
+		run("Create Selection");
+		roiManager("Add");
+		roiManager("Select", 1);
+		roiManager("Rename", "Blue");//[1]
+		roiManager("Select", newArray(0,1));
+		roiManager("AND");
+		roiManager("Add");
+		roiManager("Select", 2);
+		roiManager("Rename", "Blue");//[1]
+		roiManager("Select", 1);
+		roiManager("Delete");
+		roiManager("select", 0);
+		run("Measure");
+		roiManager("select", 1);
+		run("Measure");
+		noSelect();
+		
+		selectWindow(colour2);
+		run("Invert");
+		run("Threshold...");
+		waitForUser("Threshold.\n \nDo not click OK until you have selected!");
+		run("Create Selection");
+		roiManager("Add");
+		roiManager("Select", 2);
+		roiManager("Rename", "Purple");//[2]
+		roiManager("Select", newArray(0,2));
+		roiManager("AND");
+		roiManager("Add");
+		roiManager("Select", 3);
+		roiManager("Rename", "Purple");//[2]
+		roiManager("Select", 2);
+		roiManager("Delete");
+		roiManager("select", 0);
+		run("Measure");
+		roiManager("select", 2);
+		run("Measure");
+		noSelect();
+		
+	//Are you happy? 
+			Dialog.create("Is this image Good?");
+			Dialog.addChoice("Are you happy with measuring??\n \nSelecting No will move this to the 'no good' folder.", newArray("Yes", "No"), "Yes");
+			Dialog.show();
+			moveImage = Dialog.getChoice();
+
+		// if no
+			// move image to Dir_nogood
+			if(moveImage=="No") {
+				newDir = Dir_nogood+workingImage;
+				File.rename(Dir_im+workingImage,newDir);
+			}
+		//if yes	
+			//Math and saving everything
+			if(moveImage == "Yes"){
+				newDir = Dir_good+workingImage;
+				File.rename(Dir_im+workingImage,newDir);
+				selectWindow("Results");
+				saveAs("Results", ""+Dir_csv+workingImage+"_StainResults.csv");
+				noSelect();
+				roiManager("Save", ""+Dir_good + workingImage +"_ROIs.zip");
+			}
+			close("*");
+			close("Results");
+			roiManager("deselect");
+			roiManager("delete");
+	Dialog.create("Do you want to open another image?");
+	Dialog.addChoice("If you select yes, it will select the next image in the list.\n \nIf you select No, this program will end.", newArray("Yes", "No"), "Yes");
+	Dialog.show();
+	nextImage = Dialog.getChoice();
+		
+		
+}//End while loop
+
