@@ -1,0 +1,338 @@
+// choose project folder
+
+Dir = getDirectory("Choose analysis folder:");
+
+//Image Directory
+Dir_im = ""+Dir+"/Images/";
+
+
+//Create folder for 'Completed Images'
+	// Dir_good
+	// dump roi and images here
+Dir_good = ""+Dir+"/CompletedImages/";
+File.makeDirectory(Dir_good);
+
+//Create folder for 'NeedToLookAt'
+	//Dir_nogood
+Dir_nogood = ""+Dir+"/NeedToLookAt/";
+File.makeDirectory(Dir_nogood);
+
+//Create folder for .csv
+	//Dir_csv
+Dir_csv = ""+Dir+"/CSV/";
+File.makeDirectory(Dir_csv);
+
+//-----------------------------------------------
+run("Set Measurements...", "area mean min integrated display redirect=None decimal=3");
+//------------------------------------------------
+//Function
+	//---------------------------
+	//----SelectCheck------------
+	//---------------------------
+	// Can save the program from crashing if you're supposed
+	//   to have an area selected. If there is no area selected, 
+	//   the program may exit. This runs a check to make sure 
+	//	 SOMETHING is selected before moving forward and potentially
+	//	 crashing the program. 
+	
+	function selectCheck() {
+		checkVal = getValue("selection.size");
+		if (checkVal == 0){
+			waitForUser("You forgot to check select!");
+		}
+	}
+
+	//---------------------------
+	//----SelectAllSelectNone----
+	//---------------------------
+	// Quick way to remove the roi selections, which can
+	//  stuff up masking and relevant.
+	
+	function noSelect() {
+	 	roiManager("Show All");
+		roiManager("Show None");
+	}
+	
+	//---------------------------
+
+//------------------------------------------------
+//
+// Roi manager
+// Outline == [0]
+// Tissue == [1]
+// MeasureableArea == [2]
+// DAB == [3]
+// Measurable DAB == [4]
+// Nuclear == [5]
+// Measurable Nuclear == [6]
+// Length Epi == [7]
+// Length SubM == [8]
+// 
+//
+//------------------------------------------------
+//
+nextImage = "Yes";
+while(nextImage =="Yes"){
+//
+	//open image
+		//get file name
+	images = getFileList(Dir_im);
+	workingImage = images[0];
+	open(Dir_im+workingImage);
+	
+	//Outline tissue
+	selectWindow(workingImage);
+	setTool("polygon");	
+	waitForUser("Outline the Tissue Area\n \nDo not click until outlined!");
+	selectCheck();
+	selectCheck();
+		// saveROI
+		// RenameROI "Outline"
+		// noSelect()
+	roiManager("Add");
+	roiManager("Select", 0);
+	roiManager("Rename", "Outline");
+	noSelect();
+		
+	//Open ColorThreshold
+		run("Color Threshold...");
+		
+		// Adjust to remove Whitespace
+			waitForUser("Threshold the whiteness using Brightness.\n \nClick Select.\n \nDo not click OK until you have selected!");
+
+		// SELECT CHECK---
+			selectCheck();
+		
+		// invert selection
+			run("Make Inverse");
+		
+		// Add
+			roiManager("Add");
+		
+		// Select [0,1] AND 
+			roiManager("select", newArray(0,1));
+			roiManager("and");
+		
+		// Add
+		// Rename[2] - "Tissue"
+			roiManager("Add");
+			roiManager("select", 2);
+			roiManager("rename", "Tissue");
+		// Delete [1]
+		roiManager("select", 1);
+		roiManager("delete");
+		noSelect();
+	
+	//ColorDecon - H DAB
+	selectWindow(workingImage);
+	run("Colour Deconvolution", "vectors=[H DAB] hide");
+	colour1 = ""+workingImage+"-(Colour_1)";
+	colour2 = ""+workingImage+"-(Colour_2)";
+	colour3 = ""+workingImage+"-(Colour_3)";
+	close(colour3);
+	selectWindow(colour1);
+		//Do you want to tidy up DAB?
+			//Yes: DAB cleab up and [2] == measuable area
+			//No: [2] == measurable area
+			Dialog.create("Are you happy?");
+			Dialog.addChoice("Honest answers only:", newArray("I'm never happy, I'm in research", "No"), "I'm never happy, I'm in research");
+			Dialog.addChoice("Do you need to clean up?", newArray("Yes", "No"), "No");
+			Dialog.show();
+			null = Dialog.getChoice();
+			choice = Dialog.getChoice();
+
+		//DAB cleanup
+			// while 'Yes' 
+			if(choice == "Yes") {
+				continuevar = "Yes";
+				count=0;
+				
+				while(continuevar == "Yes") {		
+			// Select multipoint tool
+				noSelect();
+				setTool("polygon");	
+			
+			// Outline section
+				waitForUser("Outline one section.\n \nDo not click OK until you have selected!");
+			
+			// Add
+				roiManager("Add");
+				
+			// count = count+1
+				count =count+1;
+				
+			// Ask to continue
+				Dialog.create("Continue?");
+				Dialog.addChoice("Continue?", newArray("Yes", "No"), "Yes");
+				Dialog.show();
+				continuevar = Dialog.getChoice();
+			// if 'no more'
+				if (continuevar == "No"){
+				// new array = size = count
+				// e.g. 3 (indices 2,3,4)
+				
+				cleanuparr = newArray(count);
+				noSelect();
+				for (i = 2; i <count+2;i++){
+					ref = i-2;
+					cleanuparr[ref] = i;
+				}
+				// select arr
+					roiManager("select", cleanuparr);
+				// combine 
+					if(count >1){
+						roiManager("Combine");
+					}
+				// invert
+					run("Make Inverse");
+				// add [count+2]
+					roiManager("Add");
+				// select 1(tissue),count+2
+					sel = count+2;
+					roiManager("select", newArray(1,sel));
+				// AND
+					roiManager("and");
+				// Add
+					roiManager("add");
+				deletearr = roiManager("count")-3;
+				cleanuparr = newArray(deletearr);
+				for (i = 2; i <count+3;i++){
+					ref = i-2;
+					cleanuparr[ref] = i;
+				}
+				// select arr
+					roiManager("select", cleanuparr);
+				// delete
+					roiManager("delete");
+				// Rename[2] == 'Measurable Area'
+					roiManager("select", 2);
+					roiManager("rename", "Measurable Area");
+				} // end removal of clean up space
+			} // While
+		} // End clean up
+		if (choice == "No"){
+			//If no clean up required: 
+			noSelect();
+			roiManager("select", 1);
+			roiManager("add");
+			roiManager("select", 2);
+			roiManager("rename", "Measureable Area");
+		}
+		//BrownArea
+			// Open Colour2
+			selectWindow(colour2); 
+			// Invert
+				noSelect();
+				run("Invert");
+			// Open Threshold
+			run("Threshold...");
+			// WaitForUser to Threshold
+				waitForUser("Threshold the brown.\n \nDo not click OK until you have selected!");
+				selectWindow(colour2);
+			// CreateSelection and Add
+				run("Create Selection");
+				roiManager("add");
+			// Rename[3] = DAB
+				roiManager("select", 3);
+				roiManager("rename", "DAB");
+			// Combine 
+				roiManager("select", newArray(2,3));
+				roiManager("and");
+				roiManager("add");
+				roiManager("select", 4);
+				roiManager("rename", "Measurable DAB"); 
+		//Blue Area
+			selectWindow(colour1);
+			// Invert
+				noSelect();
+				run("Invert");
+			// Open Threshold
+				run("Threshold...");
+			// WaitForUser to Threshold
+				waitForUser("Threshold the nucleus.\n \nDo not click OK until you have selected!");
+				selectWindow(colour1);
+			// CreateSelection and Add
+				run("Create Selection");
+				roiManager("add");
+			// Rename[3] = DAB
+				roiManager("select", 5);
+				roiManager("rename", "Nucleus");
+			// Combine 
+				roiManager("select", newArray(2,5));
+				roiManager("and");
+				roiManager("add");
+				roiManager("select", 6);
+				roiManager("rename", "Measurable Nucleus"); 
+		//Blue Area
+			//Outline Length of Epithelium
+			selectWindow(workingImage);
+			setTool("polyline");
+			waitForUser("Draw Epithelium.\n \nDo not click OK until you have selected!");
+			selectCheck();
+			roiManager("add");
+			roiManager("select", 7);
+			roiManager("rename", "EpithelialOutline"); 
+			
+			//Outline Length of SubM
+			setTool("polyline");
+			waitForUser("Draw SubMucosa.\n \nDo not click OK until you have selected!");
+			selectCheck();
+			roiManager("add");
+			roiManager("select", 8);
+			roiManager("rename", "SubMOutline");
+			
+	//Are you happy? 
+			Dialog.create("Is this image Good?");
+			Dialog.addChoice("Are you happy with the thresholding??\n \nSelecting No will move this to the 'no good' folder.", newArray("Yes", "No"), "Yes");
+			Dialog.show();
+			moveImage = Dialog.getChoice();
+
+		// if no
+			// move image to Dir_nogood
+			if(moveImage=="No") {
+				newDir = Dir_nogood+workingImage;
+				File.rename(Dir_im+workingImage,newDir);
+			}
+		//if yes	
+			//Math and saving everything
+			if(moveImage == "Yes"){
+				selectWindow(colour1);
+				roiManager("select", 6);
+				run("Measure");
+				roiManager("select", 2);
+				run("Measure");
+				selectWindow(colour2);
+				roiManager("select", 4);
+				run("Measure");
+				roiManager("select", 2);
+				run("Measure");
+				roiManager("select", 7);
+				run("Measure");
+				roiManager("select", 8);
+				run("Measure");
+				
+				newDir = Dir_good+workingImage;
+				File.rename(Dir_im+workingImage,newDir);
+				selectWindow("Results");
+				saveAs("Results", ""+Dir_csv+workingImage+"_StainResults.csv");
+				noSelect();
+				roiManager("Save", ""+Dir_good + workingImage +"_ROIs.zip");
+			}
+			close("*");
+			close("Results");
+			roiManager("deselect");
+			roiManager("delete");
+	Dialog.create("Do you want to open another image?");
+	Dialog.addChoice("If you select yes, it will select the next image in the list.\n \nIf you select No, this program will end.", newArray("Yes", "No"), "Yes");
+	Dialog.show();
+	nextImage = Dialog.getChoice();
+			
+}//End while loop	 
+		
+
+
+
+
+
+
+
